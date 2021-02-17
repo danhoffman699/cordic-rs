@@ -23,21 +23,16 @@ fn main() {
     // NOTE The cumulative product is done by re-calculating and multiplying
     // all elements of the vector together with fold()
     let kvalues = (0..23).map(|x| {
-	(0_i32..23_i32).take(x).map(|y| {
+	(0_i32..23_i32).take(x + 1).map(|y| {
 	    1.0_f32 / (1.0_f32 + 2_f32.powi(-2 * y)).sqrt().abs()
 	}).fold(1.0, |x, y| x*y)
     }).collect::<Vec<f32>>();
-    
-    println!("angles: {:#?}", &angles);
-    println!("kvalues: {:#?}", &kvalues);
-
-    println!("theta: {}, iters: {}", theta, iters);
 
     let mut poweroftwo = 1.0;
-    let mut angle = angles[1];
+    let mut angle = angles[0];
     let mut v = [1.0, 0.0]; // Initialize as cos = 1, sine = 0
     let mut cur_theta = theta;
-    for i in 0..iters-1 {
+    for i in 1..iters-1 {
 	let sigma = if cur_theta < 0.0 {
 	    -1.0
 	} else {
@@ -50,12 +45,13 @@ fn main() {
 	    [factor, 1.0]
 	];
 	
+	// v = R * v
 	v = [
 	    matrix[0][0] * v[0] + matrix[0][1] * v[1],
 	    matrix[1][0] * v[0] + matrix[1][1] * v[1]
 	];
 
-	cur_theta = theta - sigma * angle;
+	cur_theta = cur_theta - sigma * angle;
 	poweroftwo = poweroftwo / 2.0;
 
 	if i + 2 > angles.len() as u64 {
@@ -64,4 +60,18 @@ fn main() {
 	    angle = angles[i as usize + 2];
 	}
     }
+
+    // Scale vector back such that magnitude is 1
+    // NOTE: This can be done either by keeping track of the
+    // initial values or performing a square root
+    v = [
+	v[0] * kvalues[iters as usize - 1],
+	v[1] * kvalues[iters as usize - 1]
+    ];
+    v = [
+	v[0] / (v[0]*v[0] + v[1]*v[1]).sqrt(),
+	v[1] / (v[0]*v[0] + v[1]*v[1]).sqrt(),
+    ];
+    println!("cos {} == {}", theta, v[0]);
+    println!("sin {} == {}", theta, v[1]);
 }
