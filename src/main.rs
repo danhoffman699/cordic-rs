@@ -37,7 +37,7 @@ fn main() {
     let mut angle = angles[1];
     let mut v = [1.0, 0.0]; // Initialize as cos = 1, sine = 0
     let mut cur_theta = theta;
-    for i in (0..iters -1) {
+    for i in 0..iters-1 {
 	let sigma = if cur_theta < 0.0 {
 	    -1.0
 	} else {
@@ -58,6 +58,10 @@ fn main() {
 	cur_theta = theta - sigma * angle;
 	poweroftwo = poweroftwo / 2.0;
 
-	todo!()
+	if i + 2 > angles.len() as u64 {
+	    angle = angle / 2.0;
+	} else {
+	    angle = angles[i as usize + 2];
+	}
     }
 }
