@@ -1,6 +1,75 @@
 // CORDIC Demonstration in Rust
 //
+// This uses fixed-point integers to demonstrate the efficiency
+// realized by power-of-two multiplications and divisions.
+//
+// Floating point integers are normally broken up into three segments
+//   1. Base
+//   2. Exponent
+//   3. "Special" bits
+//
+// Floating point works similarly to scientific notation, where base is
+// the base, exponent is the exponent (although normally expressed as
+// 2^n instead of 10^n). The "Special" bits define things like
+// Not-a-Number (NaN) for cases like 0/0, +Inf and -Inf in cases
+// where the base and exponents do not have enough bits to express
+// the full value
+//
+// Fixed point is just an integer with a set number of places reserved
+// at the end for fractional components
+//
 // If you have any questions, feel free to email me at djh4@illinois.edu
+//
+// NOTE: This entire file is 100% self contained and will work on
+// play.rust-lang.org (you may need to replace theta and iters with
+// constants, but that should be it)
+
+use std::ops::{ Add, Sub, Mul, Div };
+
+// Fixed-Point Arithmetic
+//
+// The only reason this is implemented is to showcase the
+// efficiency of bitshifts-as-multiplication. All functions
+// done through here can be done through f64 normally
+pub struct FixedPoint {
+    val: f64
+}
+
+impl FixedPoint {
+    fn new(val: i64) -> Self {
+	Self {
+	    val: val as f64
+	}
+    }
+}
+
+impl Add for FixedPoint {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+	Self { val: self.val + other.val }
+    }
+}
+
+impl Sub for FixedPoint {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self {
+	Self { val: self.val - other.val }
+    }
+}
+
+impl Mul for FixedPoint {
+    type Output = Self;
+    fn mul(self, other: Self) -> Self {
+	Self { val: self.val * other.val }
+    }
+}
+
+impl Div for FixedPoint {
+    type Output = Self;
+    fn div(self, other: Self) -> Self {
+	Self { val: self.val / other.val }
+    }
+}
 
 fn main() {
     // Pull parameters from string, should be called as either
@@ -46,6 +115,10 @@ fn main() {
 	];
 	
 	// v = R * v
+	// NOTE: Matrix is always of the form
+	// [ 1.0, -factor; factor, 1.0 ]
+	//
+	// The statements x *= 2 and x <<= 1 are equivalent
 	v = [
 	    matrix[0][0] * v[0] + matrix[0][1] * v[1],
 	    matrix[1][0] * v[0] + matrix[1][1] * v[1]
