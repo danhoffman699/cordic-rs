@@ -25,6 +25,8 @@
 // constants, but that should be it)
 
 use std::ops::{ Add, Sub, Mul, Div };
+use std::cmp::{ Ordering, PartialEq, PartialOrd };
+use std::fmt;
 
 // Fixed-Point Arithmetic
 //
@@ -36,10 +38,18 @@ pub struct FixedPoint {
 }
 
 impl FixedPoint {
-    fn new(val: i64) -> Self {
+    fn new(val: f64) -> Self {
 	Self {
-	    val: val as f64
+	    val
 	}
+    }
+}
+
+impl Copy for FixedPoint {}
+
+impl Clone for FixedPoint {
+    fn clone(&self) -> Self {
+	Self { val: self.val }
     }
 }
 
@@ -71,47 +81,64 @@ impl Div for FixedPoint {
     }
 }
 
-fn main() {
-    // Pull parameters from string, should be called as either
-    // ./cordic-rs [theta] [iters]
-    // or
-    // cargo run [theta] [iters]
-    let theta = std::env::args().nth(1).unwrap().parse::<f32>().unwrap();
-    let iters = std::env::args().nth(2).unwrap().parse::<u64>().unwrap();
+impl PartialOrd for FixedPoint {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+	self.val.partial_cmp(&other.val)
+    }
+}
 
+impl PartialEq for FixedPoint {
+    fn eq(&self, other: &Self) -> bool {
+	self.val == other.val
+    }
+}
+
+impl fmt::Display for FixedPoint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+	write!(f, "{}", self.val)
+    }
+}
+
+fn cordic(theta: FixedPoint, iters: u64) -> [FixedPoint; 2] {
     // CORDIC (for trig functions, at least) does require some
     // compile time constants. However, this is far more space
     // efficient than naively storing sine itself.
     
     // atan(2^-x)
     let angles = (0_i32..28_i32).map(|x| {
-	(2_f32.powi(-1 * x) as f32).atan()
-    }).collect::<Vec<f32>>();
+	FixedPoint::new(
+	    (2_f64.powi(-1 * x) as f64).atan()
+	)
+    }).collect::<Vec<FixedPoint>>();
 
     // cumprod(1 / sqrt(1 + 2^-2y))
     // NOTE The cumulative product is done by re-calculating and multiplying
     // all elements of the vector together with fold()
     let kvalues = (0..23).map(|x| {
-	(0_i32..23_i32).take(x + 1).map(|y| {
-	    1.0_f32 / (1.0_f32 + 2_f32.powi(-2 * y)).sqrt().abs()
-	}).fold(1.0, |x, y| x*y)
-    }).collect::<Vec<f32>>();
+	FixedPoint::new(
+	    (0_i32..23_i32).take(x + 1).map(|y| {
+		1.0_f64 / (1.0_f64 + 2_f64.powi(-2 * y)).sqrt().abs()
+	    }).fold(1.0, |x, y| x*y)
+	)
+    }).collect::<Vec<FixedPoint>>();
 
-    let mut poweroftwo = 1.0;
+    let mut poweroftwo = FixedPoint::new(1.0);
     let mut angle = angles[0];
-    let mut v = [1.0, 0.0]; // Initialize as cos = 1, sine = 0
+    let mut v = [FixedPoint::new(1.0), FixedPoint::new(0.0)]; // Initialize as cos = 1, sine = 0
     let mut cur_theta = theta;
     for i in 1..iters-1 {
-	let sigma = if cur_theta < 0.0 {
-	    -1.0
-	} else {
-	    1.0
-	};
+	let sigma = FixedPoint::new(
+	    if cur_theta < FixedPoint::new(0.0) {
+		-1.0
+	    } else {
+		1.0
+	    }
+	);
 
 	let factor = sigma * poweroftwo;
 	let matrix = [
-	    [1.0, -factor],
-	    [factor, 1.0]
+	    [FixedPoint::new(1.0), FixedPoint::new(-1.0) * factor],
+	    [factor, FixedPoint::new(1.0)]
 	];
 	
 	// v = R * v
@@ -125,10 +152,10 @@ fn main() {
 	];
 
 	cur_theta = cur_theta - sigma * angle;
-	poweroftwo = poweroftwo / 2.0;
+	poweroftwo = poweroftwo / FixedPoint::new(2.0);
 
 	if i + 2 > angles.len() as u64 {
-	    angle = angle / 2.0;
+	    angle = angle / FixedPoint::new(2.0);
 	} else {
 	    angle = angles[i as usize + 2];
 	}
@@ -141,10 +168,38 @@ fn main() {
 	v[0] * kvalues[iters as usize - 1],
 	v[1] * kvalues[iters as usize - 1]
     ];
+/*
     v = [
 	v[0] / (v[0]*v[0] + v[1]*v[1]).sqrt(),
 	v[1] / (v[0]*v[0] + v[1]*v[1]).sqrt(),
     ];
+*/
     println!("cos {} == {}", theta, v[0]);
     println!("sin {} == {}", theta, v[1]);
+
+    v
+}
+
+fn main() {
+    // Pull parameters from string, should be called as either
+    // ./cordic-rs [theta] [iters]
+    // or
+    // cargo run [theta] [iters]
+    let theta = FixedPoint::new(std::env::args().nth(1).unwrap().parse::<f64>().unwrap());
+    let iters = std::env::args().nth(2).unwrap().parse::<u64>().unwrap();
+
+    cordic(theta, iters);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn basic() {
+	let ret = cordic(FixedPoint::new(0.0), 10);
+
+	assert![ret[0] > FixedPoint::new(0.8) && ret[0] < FixedPoint::new(1.2)];
+	assert![ret[1] > FixedPoint::new(-0.2) && ret[1] < FixedPoint::new(0.2)];
+    }
 }
