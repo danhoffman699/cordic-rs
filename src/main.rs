@@ -121,13 +121,18 @@ fn cordic(theta: FixedPoint, iters: i32) -> [FixedPoint; 2] {
     // cumprod(1 / sqrt(1 + 2^-2y))
     // NOTE The cumulative product is done by re-calculating and multiplying
     // all elements of the vector together with fold()
-    let kvalues = (0..iters+2).map(|x| {
-	FixedPoint::new(
-	    (0_i32..23_i32).take(x as usize + 1).map(|y| {
-		1.0_f64 / (1.0_f64 + 2_f64.powi(-2 * y)).sqrt().abs()
-	    }).fold(1.0_f64, |x, y| x*y)
-	)
-    }).collect::<Vec<FixedPoint>>();
+    //
+    // NOTE 2: This is static for a given number of iters, so in instances
+    // where we only compute a set number of iterations, this can be
+    // computed ahead of time
+    //
+    // NOTE 3: lim (1 + 2^(-2y))^(1/2) is approx. 1.64676026, so this
+    // can safely be used when the iteration count is above 25
+    let kvalue = FixedPoint::new(
+	(0_i32..iters).map(|y| {
+	    1.0_f64 / (1.0_f64 + 2_f64.powi(-2 * y)).sqrt().abs()
+	}).fold(1.0_f64, |x, y| x*y)
+    );
 
     let mut poweroftwo = FixedPoint::new(1.0);
     let mut angle = angles[0];
@@ -153,6 +158,15 @@ fn cordic(theta: FixedPoint, iters: i32) -> [FixedPoint; 2] {
 	// [ 1.0, -factor; factor, 1.0 ]
 	//
 	// The statements x *= 2 and x <<= 1 are equivalent
+	//
+	// You can imagine `v` as a vector whose cosine is
+	// one and sine is zero. The following matrix is a
+	// rotation vector, and it is normally of the form
+	// [ cos theta, -sin theta; sin theta, cos theta ]
+	//
+	// However, the following simplifies down to
+	// a rotation of tan^-1(2^-i) and a increase
+	// in magnitude of (1 + 2^(-2j))^(1/2)
 	v = [
 	    matrix[0][0] * v[0] + matrix[0][1] * v[1],
 	    matrix[1][0] * v[0] + matrix[1][1] * v[1]
@@ -175,8 +189,8 @@ fn cordic(theta: FixedPoint, iters: i32) -> [FixedPoint; 2] {
     // hardware multiplication), then it is too slow for square roots
     // and divisions
     v = [
-	v[0] * kvalues[iters as usize - 1],
-	v[1] * kvalues[iters as usize - 1]
+	v[0] * kvalue,
+	v[1] * kvalue
     ];
 
     v
