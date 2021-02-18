@@ -99,13 +99,20 @@ impl fmt::Display for FixedPoint {
     }
 }
 
-fn cordic(theta: FixedPoint, iters: u64) -> [FixedPoint; 2] {
+fn cordic(theta: FixedPoint, iters: i32) -> [FixedPoint; 2] {
+    if iters <= 0 {
+	panic!("Iters must be greater than zero");
+    }
+    
     // CORDIC (for trig functions, at least) does require some
     // compile time constants. However, this is far more space
-    // efficient than naively storing sine itself.
+    // efficient than naively storing sine itself. These are
+    // included here to allow for larger iteration countes, but
+    // any reasonable implementation would pre-compute a certain
+    // amount and keep them in a global array
     
     // atan(2^-x)
-    let angles = (0_i32..28_i32).map(|x| {
+    let angles = (0..iters+2).map(|x| {
 	FixedPoint::new(
 	    (2_f64.powi(-1 * x) as f64).atan()
 	)
@@ -114,11 +121,11 @@ fn cordic(theta: FixedPoint, iters: u64) -> [FixedPoint; 2] {
     // cumprod(1 / sqrt(1 + 2^-2y))
     // NOTE The cumulative product is done by re-calculating and multiplying
     // all elements of the vector together with fold()
-    let kvalues = (0..23).map(|x| {
+    let kvalues = (0..iters+2).map(|x| {
 	FixedPoint::new(
-	    (0_i32..23_i32).take(x + 1).map(|y| {
+	    (0_i32..23_i32).take(x as usize + 1).map(|y| {
 		1.0_f64 / (1.0_f64 + 2_f64.powi(-2 * y)).sqrt().abs()
-	    }).fold(1.0, |x, y| x*y)
+	    }).fold(1.0_f64, |x, y| x*y)
 	)
     }).collect::<Vec<FixedPoint>>();
 
@@ -126,7 +133,7 @@ fn cordic(theta: FixedPoint, iters: u64) -> [FixedPoint; 2] {
     let mut angle = angles[0];
     let mut v = [FixedPoint::new(1.0), FixedPoint::new(0.0)]; // Initialize as cos = 1, sine = 0
     let mut cur_theta = theta;
-    for i in 1..iters-1 {
+    for i in 1..(iters as usize - 1) {
 	let sigma = FixedPoint::new(
 	    if cur_theta < FixedPoint::new(0.0) {
 		-1.0
@@ -154,7 +161,7 @@ fn cordic(theta: FixedPoint, iters: u64) -> [FixedPoint; 2] {
 	cur_theta = cur_theta - sigma * angle;
 	poweroftwo = poweroftwo / FixedPoint::new(2.0);
 
-	if i + 2 > angles.len() as u64 {
+	if i + 2 > angles.len() {
 	    angle = angle / FixedPoint::new(2.0);
 	} else {
 	    angle = angles[i as usize + 2];
@@ -181,9 +188,11 @@ fn main() {
     // or
     // cargo run [theta] [iters]
     let theta = FixedPoint::new(std::env::args().nth(1).unwrap().parse::<f64>().unwrap());
-    let iters = std::env::args().nth(2).unwrap().parse::<u64>().unwrap();
+    let iters = std::env::args().nth(2).unwrap().parse::<i32>().unwrap();
+    
+    let ret = cordic(theta, iters);
 
-    cordic(theta, iters);
+    println!("cos {} == {}\nsin {} == {}", theta, ret[0], theta, ret[1]);
 }
 
 #[cfg(test)]
