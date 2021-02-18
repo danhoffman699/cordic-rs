@@ -196,7 +196,6 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
 	    matrix[1][0] * v[0] + matrix[1][1] * v[1]
 	];
 
-	// We keep track of where the computed angle is, and
 	theta = theta - sigma * angle;
 	poweroftwo = poweroftwo / fixed_point_pos_two;
 
@@ -213,12 +212,10 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
     // is slow enough that CORDIC is practical (i.e. expensive
     // hardware multiplication), then it is too slow for square roots
     // and divisions
-    v = [
+    [
 	v[0] * kvalue,
 	v[1] * kvalue
-    ];
-
-    v
+    ]
 }
 
 fn main() {
