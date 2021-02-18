@@ -142,9 +142,6 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
     // NOTE 2: This is static for a given number of iters, so in instances
     // where we only compute a set number of iterations, this can be
     // computed ahead of time
-    //
-    // NOTE 3: lim (1 + 2^(-2y))^(1/2) is approx. 1.64676026, so this
-    // can safely be used when the iteration count is above 25
     let kvalue = FixedPoint::new(
 	(0_i32..(iters as i32 - 1)).map(|y| {
 	    1.0_f64 / (1.0_f64 + 2_f64.powi(-2 * y)).sqrt().abs()
@@ -163,17 +160,9 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
 	    }
 	);
 
-	let factor = sigma * poweroftwo;
-	let matrix = [
-	    [FixedPoint::new(1.0), FixedPoint::new(-1.0) * factor],
-	    [factor, FixedPoint::new(1.0)]
-	];
-	
 	// v = R * v
 	// NOTE: Matrix is always of the form
 	// [ 1.0, -factor; factor, 1.0 ]
-	//
-	// The statements x *= 2 and x <<= 1 are equivalent
 	//
 	// You can imagine `v` as a vector whose cosine is
 	// one and sine is zero. The following matrix is a
@@ -183,11 +172,25 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
 	// However, the following simplifies down to
 	// a rotation of tan^-1(2^-i) and a increase
 	// in magnitude of (1 + 2^(-2j))^(1/2)
+
+	let factor = sigma * poweroftwo;
+	let matrix = [
+	    [
+		FixedPoint::new(1.0),
+		FixedPoint::new(-1.0) * factor
+	    ],
+	    [
+		factor,
+		FixedPoint::new(1.0)
+	    ]
+	];
+	
 	v = [
 	    matrix[0][0] * v[0] + matrix[0][1] * v[1],
 	    matrix[1][0] * v[0] + matrix[1][1] * v[1]
 	];
 
+	// We keep track of where the computed angle is, and
 	theta = theta - sigma * angle;
 	poweroftwo = poweroftwo / FixedPoint::new(2.0);
 
