@@ -24,7 +24,7 @@
 // play.rust-lang.org (you may need to replace theta and iters with
 // constants, but that should be it)
 
-use std::ops::{ Add, Sub, Mul, Div };
+use std::ops::{ Add, Sub, Mul, Div, Rem };
 use std::cmp::{ Ordering, PartialEq, PartialOrd };
 use std::fmt;
 
@@ -81,6 +81,15 @@ impl Div for FixedPoint {
     }
 }
 
+impl Rem for FixedPoint {
+    type Output = Self;
+    fn rem(self, modulus: FixedPoint) -> Self {
+	Self {
+	    val: self.val.rem(modulus.val)
+	}
+    }
+}
+
 impl PartialOrd for FixedPoint {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
 	self.val.partial_cmp(&other.val)
@@ -100,6 +109,14 @@ impl fmt::Display for FixedPoint {
 }
 
 fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
+    // CORDIC *can* calculate theta even if theta wraps around, but
+    // at the expense of accuracy. We make sure that theta is in
+    // its lowest valid representation (remainder after division
+    // by 2*pi). Another issue with floating point numbers is
+    // buildup of error across iterations. Fixed point arithmetic
+    // can fix this, but I haven't gotten around to implementing that
+    theta = theta.rem(FixedPoint::new(2.0 * std::f64::consts::PI));
+    
     // CORDIC (for trig functions, at least) does require some
     // compile time constants. However, this is far more space
     // efficient than naively storing sine itself. These are
@@ -207,23 +224,22 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn close_enough(a: FixedPoint, b: FixedPoint) -> bool {
+	(a - b) < FixedPoint::new(0.01)
+    }
     
     #[test]
     fn basic() {
 	for i in (0..628) {
-	    let ret = cordic(FixedPoint::new(i as f64 / 100.0), 100);
-
+	    let ret = cordic(FixedPoint::new(i as f64 / 100.0), 1000);
 	    let cos = FixedPoint::new((i as f64 / 100.0).cos());
 	    let sin = FixedPoint::new((i as f64 / 100.0).sin());
-
-	    let lower_mul = FixedPoint::new(0.75);
-	    let upper_mul = FixedPoint::new(1.25);
-
-	    println!("Theta == {}\t{} vs {}\t{} vs {}", (i as f64 / 100.0), ret[0], cos, ret[1], sin);
 	    
-	    assert![ret[0] > (cos * lower_mul) && ret[0] < (cos * upper_mul)];
-	    assert![ret[1] > (sin * lower_mul) && ret[1] < (sin * upper_mul)];
+	    println!("Theta == {}\t{} vs {}\t{} vs {}", (i as f64 / 100.0), ret[0], cos, ret[1], sin);
 
+	    assert![close_enough(ret[0], cos)];
+	    assert![close_enough(ret[1], sin)];
 	}
     }
 }
