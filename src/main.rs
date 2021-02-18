@@ -34,13 +34,13 @@ use std::fmt;
 // efficiency of bitshifts-as-multiplication. All functions
 // done through here can be done through f64 normally
 pub struct FixedPoint {
-    val: i64
+    val: f64
 }
 
 impl FixedPoint {
     fn new(val: f64) -> Self {
 	Self {
-	    val: val as i64
+	    val
 	}
     }
 }
