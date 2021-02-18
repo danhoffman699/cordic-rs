@@ -34,13 +34,13 @@ use std::fmt;
 // efficiency of bitshifts-as-multiplication. All functions
 // done through here can be done through f64 normally
 pub struct FixedPoint {
-    val: f64
+    val: fixed::types::I4F124
 }
 
 impl FixedPoint {
     fn new(val: f64) -> Self {
 	Self {
-	    val
+	    val: fixed::types::I4F124::from_num(val)
 	}
     }
 }
@@ -56,7 +56,7 @@ impl Clone for FixedPoint {
 impl Add for FixedPoint {
     type Output = Self;
     fn add(self, other: Self) -> Self {
-	Self { val: self.val + other.val }
+	Self {val: self.val + other.val }
     }
 }
 
@@ -163,19 +163,14 @@ fn cordic(theta: FixedPoint, iters: u64) -> [FixedPoint; 2] {
 
     // Scale vector back such that magnitude is 1
     // NOTE: This can be done either by keeping track of the
-    // initial values or performing a square root
+    // initial values or performing a square root. If the machine
+    // is slow enough that CORDIC is practical (i.e. expensive
+    // hardware multiplication), then it is too slow for square roots
+    // and divisions
     v = [
 	v[0] * kvalues[iters as usize - 1],
 	v[1] * kvalues[iters as usize - 1]
     ];
-/*
-    v = [
-	v[0] / (v[0]*v[0] + v[1]*v[1]).sqrt(),
-	v[1] / (v[0]*v[0] + v[1]*v[1]).sqrt(),
-    ];
-*/
-    println!("cos {} == {}", theta, v[0]);
-    println!("sin {} == {}", theta, v[1]);
 
     v
 }
