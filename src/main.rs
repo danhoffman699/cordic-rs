@@ -150,15 +150,21 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
 
     let mut poweroftwo = FixedPoint::new(1.0);
     let mut angle = angles[0];
-    let mut v = [FixedPoint::new(1.0), FixedPoint::new(0.0)]; // Initialize as cos = 1, sine = 0
+    let fixed_point_zero = FixedPoint::new(0.0);
+    let fixed_point_pos_one = FixedPoint::new(1.0);
+    let fixed_point_neg_one = FixedPoint::new(-1.0);
+    let fixed_point_pos_two = FixedPoint::new(2.0);
+
+    let mut v = [
+	fixed_point_pos_one,
+	fixed_point_zero
+    ]; // Initialize as cos = 1, sine = 0
     for i in 0..iters {
-	let sigma = FixedPoint::new(
-	    if theta < FixedPoint::new(0.0) {
-		-1.0
-	    } else {
-		1.0
-	    }
-	);
+	let sigma = if theta < fixed_point_zero {
+	    fixed_point_neg_one
+	} else {
+	    fixed_point_pos_one
+	};
 
 	// v = R * v
 	// NOTE: Matrix is always of the form
@@ -176,12 +182,12 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
 	let factor = sigma * poweroftwo;
 	let matrix = [
 	    [
-		FixedPoint::new(1.0),
-		FixedPoint::new(-1.0) * factor
+		fixed_point_pos_one,
+		fixed_point_neg_one* factor
 	    ],
 	    [
 		factor,
-		FixedPoint::new(1.0)
+		fixed_point_pos_one
 	    ]
 	];
 	
@@ -192,10 +198,10 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
 
 	// We keep track of where the computed angle is, and
 	theta = theta - sigma * angle;
-	poweroftwo = poweroftwo / FixedPoint::new(2.0);
+	poweroftwo = poweroftwo / fixed_point_pos_two;
 
 	if i + 1 > angles.len() {
-	    angle = angle / FixedPoint::new(2.0);
+	    angle = angle / fixed_point_pos_two;
 	} else {
 	    angle = angles[i as usize + 1];
 	}
@@ -238,7 +244,7 @@ mod tests {
     
     #[test]
     fn basic() {
-	for i in (0..628) {
+	for i in 0..628 {
 	    let ret = cordic(FixedPoint::new(i as f64 / 100.0), 1000);
 	    let cos = FixedPoint::new((i as f64 / 100.0).cos());
 	    let sin = FixedPoint::new((i as f64 / 100.0).sin());
