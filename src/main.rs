@@ -114,7 +114,11 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
     // its lowest valid representation (remainder after division
     // by 2*pi). Another issue with floating point numbers is
     // buildup of error across iterations. Fixed point arithmetic
-    // can fix this, but I haven't gotten around to implementing that
+    // can fix this, but I haven't gotten around to implementing that.
+    //
+    // NOTE: The "buildup of error across iterations" is why the
+    // current unit test fails. Moving over to proper fixed points
+    // should fix this
     theta = theta.rem(FixedPoint::new(2.0 * std::f64::consts::PI));
     
     // CORDIC (for trig functions, at least) does require some
@@ -127,7 +131,7 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
     // atan(2^-x)
     let angles = (0..(iters as i32 + 2)).map(|x| {
 	FixedPoint::new(
-	    (2_f64.powi(-1 * x) as f64).atan()
+	    (2_f64.powi(-1 * x)).atan()
 	)
     }).collect::<Vec<FixedPoint>>();
 
