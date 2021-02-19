@@ -1,0 +1,4 @@
+    Finished dev [unoptimized + debuginfo] target(s) in 0.01s
+     Running `target/debug/cordic-rs 6.28318531 100`
+cos 6.28318531 == 0.9999999999999999
+sin 6.28318531 == 0.0000000028204141241710466

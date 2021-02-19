@@ -183,7 +183,7 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
 	let matrix = [
 	    [
 		fixed_point_pos_one,
-		fixed_point_neg_one* factor
+		fixed_point_neg_one * factor
 	    ],
 	    [
 		factor,
@@ -199,11 +199,7 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
 	theta = theta - sigma * angle;
 	poweroftwo = poweroftwo / fixed_point_pos_two;
 
-	if i + 1 > angles.len() {
-	    angle = angle / fixed_point_pos_two;
-	} else {
-	    angle = angles[i as usize + 1];
-	}
+	angle = angles[i as usize + 1];
     }
 
     // Scale vector back such that magnitude is 1
