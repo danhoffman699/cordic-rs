@@ -172,12 +172,16 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
 	//
 	// You can imagine `v` as a vector whose cosine is
 	// one and sine is zero. The following matrix is a
-	// rotation vector, and it is normally of the form
-	// [ cos theta, -sin theta; sin theta, cos theta ]
+	// rotation matrix, and it is normally of the form
+	// [ cos theta, -sin theta; sin theta, cos theta ].
+	// However, this also magnfiies the vector by some
+	// set amount, and we account for all these magnitude
+	// increases in one multiplication at the end of the
+	// calculation
 	//
-	// However, the following simplifies down to
-	// a rotation of tan^-1(2^-i) and a increase
-	// in magnitude of (1 + 2^(-2j))^(1/2)
+	// The following simplifies down to a rotation of
+	// tan^-1(2^-i) and a increase in magnitude of
+	// (1 + 2^(-2j))^(1/2)
 
 	let factor = sigma * poweroftwo;
 	let matrix = [
