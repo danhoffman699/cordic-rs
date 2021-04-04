@@ -201,8 +201,8 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
         // those bit-shifts here, but for the sake of explaining this,
         // we will multiply the two values without any optimizations
         v = [
-            matrix[0][0] * v[0] + matrix[0][1] * v[1],
-            matrix[1][0] * v[0] + matrix[1][1] * v[1],
+            v[0] + fixed_point_neg_one * factor * v[1],
+            factor * v[0] + v[1],
         ];
 
         // sigma
