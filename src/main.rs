@@ -179,6 +179,7 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
         // tan^-1(2^-i) and a increase in magnitude of
         // (1 + 2^(-2j))^(1/2)
 
+/*
         let factor = if sigma_is_neg {
             // NOTE: Almost all compilers will optimize multiplication by
             // -1 to be flipping a single bit, so for performance reasons
@@ -191,19 +192,31 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
         } else {
             poweroftwo
         };
+
         let matrix = [
             [fixed_point_pos_one, fixed_point_neg_one * factor],
             [factor, fixed_point_pos_one],
         ];
 
-        // NOTE: Every element of the matrix is either 1 or 2^-n for some
-        // number n. An efficient implementation would directly apply
-        // those bit-shifts here, but for the sake of explaining this,
-        // we will multiply the two values without any optimizations
-        v = [
-            v[0] + fixed_point_neg_one * factor * v[1],
-            factor * v[0] + v[1],
-        ];
+        */
+
+        // NOTE: v = matrix * v using the variables as defined above, but the
+        // following is much faster for a few reasons
+        //   1. Multiplication by constants has optimizations done at compile time
+        //     a. -1 * x simplifies to flipping a single bit
+        //     b. Two constants multiplied by each other are pre-multiplied
+
+        v = if sigma_is_neg {
+            [
+                v[0] + poweroftwo * v[1],
+                FixedPoint::new(-1.0) * poweroftwo * v[0] + v[1]
+            ]
+        } else {
+            [
+                v[0] + poweroftwo * v[1],
+                FixedPoint::new(-1.0) * poweroftwo * v[0] + v[1]
+            ]
+        };
 
         // sigma
         theta = if sigma_is_neg {
