@@ -160,11 +160,7 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
 
     let mut v = [fixed_point_pos_one, fixed_point_zero]; // Initialize as cos = 1, sine = 0
     for i in 0..iters {
-        let sigma = if theta < fixed_point_zero {
-            fixed_point_neg_one
-        } else {
-            fixed_point_pos_one
-        };
+        let sigma_is_neg = theta < fixed_point_zero;
 
         // v = R * v
         // NOTE: Matrix is always of the form
@@ -183,18 +179,38 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
         // tan^-1(2^-i) and a increase in magnitude of
         // (1 + 2^(-2j))^(1/2)
 
-        let factor = sigma * poweroftwo;
+        let factor = if sigma_is_neg {
+            // NOTE: Almost all compilers will optimize multiplication by
+            // -1 to be flipping a single bit, so for performance reasons
+            // this isn't a normal multiplication
+            //
+            // HOWEVER, if -1 were stored in a variable, that optimization
+            // isn't as obvious, so the compiler might not catch it. We store
+            // sigma_is_neg instead of sigma = -1 or sigma = 1 because of this
+            FixedPoint::new(-1.0) * poweroftwo
+        } else {
+            poweroftwo
+        };
         let matrix = [
             [fixed_point_pos_one, fixed_point_neg_one * factor],
             [factor, fixed_point_pos_one],
         ];
 
+        // NOTE: Every element of the matrix is either 1 or 2^-n for some
+        // number n. An efficient implementation would directly apply
+        // those bit-shifts here, but for the sake of explaining this,
+        // we will multiply the two values without any optimizations
         v = [
             matrix[0][0] * v[0] + matrix[0][1] * v[1],
             matrix[1][0] * v[0] + matrix[1][1] * v[1],
         ];
 
-        theta = theta - sigma * angle;
+        // sigma
+        theta = if sigma_is_neg {
+            theta + angle
+        } else {
+            theta - angle
+        };
         poweroftwo = poweroftwo / fixed_point_pos_two;
 
         angle = angles[i as usize + 1];
@@ -208,6 +224,11 @@ fn cordic(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
     // and divisions
     [v[0] * kvalue, v[1] * kvalue]
 }
+
+fn taylor(mut theta: FixedPoint, iters: usize) -> [FixedPoint; 2] {
+    todo!()
+}
+
 
 fn main() {
     // Pull parameters from string, should be called as either
